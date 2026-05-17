@@ -1,4 +1,5 @@
 const { getDatabase } = require('../database/init');
+const DataWarehouseService = require('../services/dataWarehouseService');
 
 function buildFilters(query) {
   const { ano, categoria, concessionaria_id, vendedor_id, periodo_inicio, periodo_fim } = query;
@@ -6,32 +7,34 @@ function buildFilters(query) {
   const params = [];
 
   if (ano) {
-    conditions.push(`strftime('%Y', vda.data_venda) = ?`);
-    params.push(String(ano));
+    conditions.push(`dt.ano = ?`);
+    params.push(Number(ano));
   }
   if (categoria) {
     conditions.push(`vei.categoria = ?`);
     params.push(categoria);
   }
   if (concessionaria_id) {
-    conditions.push(`vda.concessionaria_id = ?`);
+    conditions.push(`fv.concessionaria_id = ?`);
     params.push(Number(concessionaria_id));
   }
   if (vendedor_id) {
-    conditions.push(`vda.vendedor_id = ?`);
+    conditions.push(`fv.vendedor_id = ?`);
     params.push(Number(vendedor_id));
   }
   if (periodo_inicio) {
-    conditions.push(`vda.data_venda >= ?`);
+    conditions.push(`dt.data >= ?`);
     params.push(periodo_inicio);
   }
   if (periodo_fim) {
-    conditions.push(`vda.data_venda <= ?`);
-    params.push(periodo_fim + ' 23:59:59');
+    conditions.push(`dt.data <= ?`);
+    params.push(periodo_fim);
   }
 
   return { clause: conditions.length ? 'AND ' + conditions.join(' AND ') : '', params };
 }
+
+const dwFrom = DataWarehouseService.getAnalyticFromClause();
 
 const relatoriosController = {
   vendasMensais(req, res) {
@@ -39,13 +42,12 @@ const relatoriosController = {
       const db = getDatabase();
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
-        SELECT strftime('%Y-%m', vda.data_venda) as mes,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+        SELECT dt.ano_mes as mes,
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE 1=1 ${clause}
-        GROUP BY mes
+        GROUP BY dt.ano_mes
         ORDER BY mes DESC
       `).all(params);
       res.json(data);
@@ -59,13 +61,12 @@ const relatoriosController = {
       const db = getDatabase();
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
-        SELECT strftime('%Y', vda.data_venda) as ano,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+        SELECT CAST(dt.ano AS TEXT) as ano,
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE 1=1 ${clause}
-        GROUP BY ano
+        GROUP BY dt.ano
         ORDER BY ano DESC
       `).all(params);
       res.json(data);
@@ -79,14 +80,13 @@ const relatoriosController = {
       const db = getDatabase();
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
-        SELECT strftime('%Y', vda.data_venda) as ano,
-               COALESCE(SUM(vda.valor_total), 0) as receita,
-               COUNT(*) as total_vendas,
-               ROUND(COALESCE(AVG(vda.valor_total), 0), 2) as ticket_medio
-        FROM vendas vda
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+        SELECT CAST(dt.ano AS TEXT) as ano,
+               COALESCE(SUM(fv.valor_total), 0) as receita,
+               SUM(fv.quantidade) as total_vendas,
+               ROUND(COALESCE(AVG(fv.valor_total), 0), 2) as ticket_medio
+        ${dwFrom}
         WHERE 1=1 ${clause}
-        GROUP BY ano
+        GROUP BY dt.ano
         ORDER BY ano DESC
       `).all(params);
       res.json(data);
@@ -100,15 +100,12 @@ const relatoriosController = {
       const db = getDatabase();
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
-        SELECT v.nome, v.cpf, c.nome as concessionaria,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN vendedores v ON vda.vendedor_id = v.id
-        JOIN concessionarias c ON v.concessionaria_id = c.id
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+        SELECT ven.nome, ven.cpf, con.nome as concessionaria,
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE 1=1 ${clause}
-        GROUP BY v.id
+        GROUP BY ven.id
         ORDER BY faturamento DESC
         LIMIT 10
       `).all(params);
@@ -123,14 +120,12 @@ const relatoriosController = {
       const db = getDatabase();
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
-        SELECT c.nome, c.cidade, c.estado,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN concessionarias c ON vda.concessionaria_id = c.id
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+        SELECT con.nome, con.cidade, con.estado,
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE 1=1 ${clause}
-        GROUP BY c.id
+        GROUP BY con.id
         ORDER BY faturamento DESC
         LIMIT 10
       `).all(params);
@@ -146,10 +141,9 @@ const relatoriosController = {
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
         SELECT vei.marca, vei.modelo, vei.categoria, vei.ano,
-               COUNT(*) as total_vendido,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento_total
-        FROM vendas vda
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+               SUM(fv.quantidade) as total_vendido,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento_total
+        ${dwFrom}
         WHERE 1=1 ${clause}
         GROUP BY vei.id
         ORDER BY total_vendido DESC
@@ -167,11 +161,9 @@ const relatoriosController = {
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
         SELECT cli.cidade,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN clientes cli ON vda.cliente_id = cli.id
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE 1=1 ${clause}
         GROUP BY cli.cidade
         ORDER BY faturamento DESC
@@ -188,10 +180,9 @@ const relatoriosController = {
       const { clause, params } = buildFilters(req.query);
       const data = db.prepare(`
         SELECT vei.categoria,
-               COUNT(*) as total_vendas,
-               COALESCE(SUM(vda.valor_total), 0) as faturamento
-        FROM vendas vda
-        JOIN veiculos vei ON vda.veiculo_id = vei.id
+               SUM(fv.quantidade) as total_vendas,
+               COALESCE(SUM(fv.valor_total), 0) as faturamento
+        ${dwFrom}
         WHERE vei.categoria IS NOT NULL AND vei.categoria != ''
           ${clause}
         GROUP BY vei.categoria

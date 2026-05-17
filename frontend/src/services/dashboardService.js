@@ -19,6 +19,14 @@ const dashboardService = {
 
   getRankingVendedores() {
     return api.get('/dashboard/ranking-vendedores');
+  },
+
+  getDataWarehouse() {
+    return api.get('/dashboard/data-warehouse');
+  },
+
+  refreshDataWarehouse() {
+    return api.post('/dashboard/data-warehouse/refresh');
   }
 };
 

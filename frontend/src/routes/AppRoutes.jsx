@@ -11,6 +11,7 @@ import Vendas from '../pages/Vendas';
 import Concessionarias from '../pages/Concessionarias';
 import Vendedores from '../pages/Vendedores';
 import Reports from '../pages/Reports';
+import DataWarehouse from '../pages/DataWarehouse';
 import Home from '../pages/Home';
 import ClienteCadastro from '../pages/ClienteCadastro';
 import ClienteDashboard from '../pages/ClienteDashboard';
@@ -77,6 +78,7 @@ export default function AppRoutes() {
       <Route path="/admin/concessionarias" element={<PrivateRoute cargos={['admin', 'gerente']}><MainLayout><Concessionarias /></MainLayout></PrivateRoute>} />
       <Route path="/admin/vendedores" element={<PrivateRoute cargos={['admin', 'gerente']}><MainLayout><Vendedores /></MainLayout></PrivateRoute>} />
       <Route path="/admin/relatorios" element={<PrivateRoute cargos={['admin', 'gerente']}><MainLayout><Reports /></MainLayout></PrivateRoute>} />
+      <Route path="/admin/data-warehouse" element={<PrivateRoute cargos={['admin', 'gerente']}><MainLayout><DataWarehouse /></MainLayout></PrivateRoute>} />
 
       {/* Página Inicial Pública */}
       <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />

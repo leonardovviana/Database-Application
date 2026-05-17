@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 const menuItems = [
   { path: '/admin',          label: 'Dashboard',        icon: 'bi-speedometer2' },
+  { path: '/admin/data-warehouse', label: 'Data Warehouse', icon: 'bi-diagram-3' },
   { path: '/admin/relatorios', label: 'Relatórios',       icon: 'bi-file-earmark-bar-graph' },
   { path: '/admin/veiculos',   label: 'Veículos',         icon: 'bi-car-front' },
   { path: '/admin/clientes',   label: 'Clientes',         icon: 'bi-people' },

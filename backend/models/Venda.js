@@ -1,4 +1,5 @@
 const { getDatabase } = require('../database/init');
+const DataWarehouseService = require('../services/dataWarehouseService');
 
 const Venda = {
   findAll() {
@@ -78,6 +79,7 @@ const Venda = {
     `).run(values);
 
     db.prepare('UPDATE veiculos SET estoque = estoque - 1 WHERE id = ?').run([data.veiculo_id]);
+    DataWarehouseService.refresh(db);
 
     return { id: result.lastInsertRowid, ...data };
   },
@@ -87,6 +89,7 @@ const Venda = {
     const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
     const values = Object.values(data);
     db.prepare(`UPDATE vendas SET ${fields} WHERE id = ?`).run([...values, id]);
+    DataWarehouseService.refresh(db);
     return this.findById(id);
   },
 
@@ -95,7 +98,9 @@ const Venda = {
     const venda = db.prepare('SELECT veiculo_id FROM vendas WHERE id = ?').get([id]);
     if (!venda) return { changes: 0 };
     db.prepare('UPDATE veiculos SET estoque = estoque + 1 WHERE id = ?').run([venda.veiculo_id]);
-    return db.prepare('DELETE FROM vendas WHERE id = ?').run([id]);
+    const result = db.prepare('DELETE FROM vendas WHERE id = ?').run([id]);
+    DataWarehouseService.refresh(db);
+    return result;
   },
 
   getMonthlySummary(limit = 12) {

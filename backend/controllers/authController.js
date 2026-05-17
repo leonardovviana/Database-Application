@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario');
 const ClienteUsuario = require('../models/ClienteUsuario');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'mm_motors_jwt_secret_key_2024_super_seguro';
+
 const authController = {
   async login(req, res) {
     try {
@@ -34,7 +36,7 @@ const authController = {
 
       const token = jwt.sign(
         { id: usuario.id, nome: usuario.nome, email: usuario.email, cargo, tabela },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
       );
 
@@ -84,7 +86,7 @@ const authController = {
 
       const token = jwt.sign(
         { id: usuario.id, nome: usuario.nome, email: usuario.email, cargo: 'cliente', tabela: 'cliente_usuarios' },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
       );
 
