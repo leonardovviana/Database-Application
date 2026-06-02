@@ -1,6 +1,7 @@
 /**
  * Seed de dados fictícios — gera ~250 vendas distribuídas no último ano
- * (2025-06-02 a 2026-06-02), além de novos clientes, vendedores e veículos.
+ * (2025-06-02 a 2026-06-02), com clientes suficientes para ~1 cliente por venda,
+ * além de novos vendedores e um catálogo amplo de veículos.
  *
  * Preserva todos os dados existentes (apenas adiciona).
  * Reaproveita initDatabase()/getDatabase() e o refresh do Data Warehouse.
@@ -11,6 +12,7 @@ const { initDatabase, getDatabase, saveDatabase } = require('./init');
 const DataWarehouseService = require('../services/dataWarehouseService');
 
 const TOTAL_VENDAS = 250;
+const TOTAL_CLIENTES = 270; // > TOTAL_VENDAS para garantir ~1 cliente por venda
 const DATA_INICIO = new Date('2025-06-02T00:00:00');
 const DATA_FIM = new Date('2026-06-02T23:59:59');
 const FORMAS_PAGAMENTO = ['financiamento', 'à vista', 'consórcio'];
@@ -30,18 +32,46 @@ function dataAleatoria() {
     `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-const NOVOS_CLIENTES = [
-  ['Beatriz Nunes', '101.202.303-01', '(11) 97777-1001', 'beatriz.nunes@email.com', 'São Paulo'],
-  ['Gustavo Ferreira', '202.303.404-02', '(21) 97777-1002', 'gustavo.ferreira@email.com', 'Rio de Janeiro'],
-  ['Larissa Martins', '303.404.505-03', '(31) 97777-1003', 'larissa.martins@email.com', 'Belo Horizonte'],
-  ['Ricardo Alves', '404.505.606-04', '(11) 97777-1004', 'ricardo.alves@email.com', 'Campinas'],
-  ['Patrícia Gomes', '505.606.707-05', '(21) 97777-1005', 'patricia.gomes@email.com', 'Niterói'],
-  ['Eduardo Barbosa', '606.707.808-06', '(31) 97777-1006', 'eduardo.barbosa@email.com', 'Contagem'],
-  ['Camila Ribeiro', '707.808.909-07', '(11) 97777-1007', 'camila.ribeiro@email.com', 'Santos'],
-  ['Thiago Carvalho', '808.909.010-08', '(21) 97777-1008', 'thiago.carvalho@email.com', 'Rio de Janeiro'],
-  ['Aline Pereira', '909.010.121-09', '(31) 97777-1009', 'aline.pereira@email.com', 'Belo Horizonte'],
-  ['Marcelo Dias', '010.121.232-10', '(11) 97777-1010', 'marcelo.dias@email.com', 'São Paulo']
+function embaralhar(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ---- Geração procedural de clientes ----
+const PRIMEIROS_NOMES = [
+  'Ana', 'Beatriz', 'Carlos', 'Daniela', 'Eduardo', 'Fernanda', 'Gustavo', 'Helena',
+  'Igor', 'Juliana', 'Lucas', 'Mariana', 'Nathan', 'Olivia', 'Paulo', 'Renata',
+  'Sergio', 'Tatiana', 'Vitor', 'Yasmin', 'Bruno', 'Camila', 'Diego', 'Elaine',
+  'Felipe', 'Gabriela', 'Henrique', 'Isabela', 'João', 'Karina', 'Leonardo', 'Marcela',
+  'Rafael', 'Sofia', 'Thiago', 'Vanessa', 'André', 'Larissa', 'Marcelo', 'Patrícia'
 ];
+const SOBRENOMES = [
+  'Silva', 'Souza', 'Oliveira', 'Lima', 'Pereira', 'Ferreira', 'Almeida', 'Costa',
+  'Rodrigues', 'Gomes', 'Martins', 'Carvalho', 'Ribeiro', 'Barbosa', 'Rocha', 'Dias',
+  'Nunes', 'Cardoso', 'Moraes', 'Pinto', 'Araújo', 'Teixeira', 'Cavalcanti', 'Freitas'
+];
+const CIDADES = [
+  'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Campinas', 'Niterói', 'Contagem',
+  'Santos', 'Guarulhos', 'Osasco', 'Uberlândia', 'Duque de Caxias', 'Sorocaba'
+];
+
+function gerarClientes(total) {
+  const lista = [];
+  for (let i = 0; i < total; i++) {
+    const nome = `${rand(PRIMEIROS_NOMES)} ${rand(SOBRENOMES)}`;
+    // CPF determinístico e único por índice (prefixo 900 evita colisão com o seed base)
+    const seq = String(900000000 + i).padStart(9, '0'); // 9 dígitos
+    const cpf = `${seq.slice(0, 3)}.${seq.slice(3, 6)}.${seq.slice(6, 9)}-${pad(i % 100)}`;
+    const ddd = rand(['11', '21', '31', '19', '13']);
+    const telefone = `(${ddd}) 9${String(8000 + (i % 2000)).padStart(4, '0')}-${String(1000 + i).slice(-4)}`;
+    const email = `cliente${i + 1}@email.com`;
+    lista.push([nome, cpf, telefone, email, rand(CIDADES)]);
+  }
+  return lista;
+}
 
 const NOVOS_VENDEDORES = [
   ['Bruno Cardoso', '121.232.343-11', '(11) 96666-2001', 'bruno.cardoso@mmmotors.com', 1],
@@ -54,17 +84,29 @@ const NOVOS_VENDEDORES = [
 
 const NOVOS_VEICULOS = [
   ['Hyundai', 'Creta', 2025, 'SUV', 145000.00, 50],
+  ['Hyundai', 'HB20', 2024, 'Hatch', 88000.00, 50],
   ['Renault', 'Kardian', 2025, 'SUV', 110000.00, 50],
+  ['Renault', 'Kwid', 2024, 'Hatch', 72000.00, 50],
   ['Volkswagen', 'Polo', 2024, 'Hatch', 92000.00, 50],
+  ['Volkswagen', 'Nivus', 2025, 'SUV', 142000.00, 50],
+  ['Volkswagen', 'Virtus', 2024, 'Sedã', 112000.00, 50],
   ['Toyota', 'Yaris', 2024, 'Sedã', 108000.00, 50],
+  ['Toyota', 'Hilux', 2025, 'SUV', 285000.00, 50],
   ['Chevrolet', 'Tracker', 2025, 'SUV', 138000.00, 50],
+  ['Chevrolet', 'Onix Plus', 2024, 'Sedã', 98000.00, 50],
   ['Fiat', 'Fastback', 2024, 'SUV', 128000.00, 50],
+  ['Fiat', 'Argo', 2024, 'Hatch', 84000.00, 50],
+  ['Fiat', 'Toro', 2025, 'SUV', 175000.00, 50],
   ['Honda', 'City', 2025, 'Sedã', 118000.00, 50],
-  ['Peugeot', '208', 2024, 'Hatch', 89000.00, 50]
+  ['Honda', 'HR-V', 2025, 'SUV', 165000.00, 50],
+  ['Peugeot', '208', 2024, 'Hatch', 89000.00, 50],
+  ['Nissan', 'Versa', 2024, 'Sedã', 105000.00, 50],
+  ['Jeep', 'Renegade', 2025, 'SUV', 155000.00, 50],
+  ['Volkswagen', 'T-Cross', 2025, 'SUV', 145000.00, 50]
 ];
 
-function inserirNovasEntidades(db) {
-  NOVOS_CLIENTES.forEach(c => {
+function inserirNovasEntidades(db, clientes) {
+  clientes.forEach(c => {
     db.prepare(`
       INSERT INTO clientes (nome, cpf, telefone, email, cidade)
       SELECT ?, ?, ?, ?, ?
@@ -90,7 +132,8 @@ function inserirNovasEntidades(db) {
 }
 
 function gerarVendas(db) {
-  const clientes = db.prepare('SELECT id FROM clientes').all().map(r => r.id);
+  // Embaralha os clientes para usar (quase) um cliente distinto por venda
+  const clientes = embaralhar(db.prepare('SELECT id FROM clientes').all().map(r => r.id));
   const vendedores = db.prepare('SELECT id, concessionaria_id FROM vendedores').all();
   const veiculos = db.prepare('SELECT id, preco FROM veiculos').all();
 
@@ -100,7 +143,7 @@ function gerarVendas(db) {
   `);
 
   for (let i = 0; i < TOTAL_VENDAS; i++) {
-    const cliente = rand(clientes);
+    const cliente = clientes[i % clientes.length]; // 1 cliente distinto por venda
     const vendedor = rand(vendedores);
     const veiculo = rand(veiculos);
     const fator = 0.95 + Math.random() * 0.10; // ±5%
@@ -124,7 +167,7 @@ async function run() {
 
   const antes = db.prepare('SELECT COUNT(*) as total FROM vendas').get().total;
 
-  inserirNovasEntidades(db);
+  inserirNovasEntidades(db, gerarClientes(TOTAL_CLIENTES));
   gerarVendas(db);
 
   const resumoDW = DataWarehouseService.refresh(db);
@@ -135,15 +178,19 @@ async function run() {
   const stats = db.prepare(
     'SELECT COUNT(*) as total, MIN(data_venda) as min, MAX(data_venda) as max FROM vendas'
   ).get();
+  const clientesComVenda = db.prepare(
+    'SELECT COUNT(DISTINCT cliente_id) as t FROM vendas'
+  ).get().t;
 
   console.log('=== Seed de dados fictícios concluído ===');
-  console.log(`Vendas antes:        ${antes}`);
-  console.log(`Vendas depois:       ${stats.total} (+${stats.total - antes})`);
-  console.log(`Período das vendas:  ${stats.min}  ->  ${stats.max}`);
-  console.log(`Clientes:            ${db.prepare('SELECT COUNT(*) as t FROM clientes').get().t}`);
-  console.log(`Vendedores:          ${db.prepare('SELECT COUNT(*) as t FROM vendedores').get().t}`);
-  console.log(`Veículos:            ${db.prepare('SELECT COUNT(*) as t FROM veiculos').get().t}`);
-  console.log(`DW -> fato_vendas:   ${resumoDW.total_vendas} | dimensões: ${resumoDW.total_dimensoes}`);
+  console.log(`Vendas antes:          ${antes}`);
+  console.log(`Vendas depois:         ${stats.total} (+${stats.total - antes})`);
+  console.log(`Período das vendas:    ${stats.min}  ->  ${stats.max}`);
+  console.log(`Clientes (total):      ${db.prepare('SELECT COUNT(*) as t FROM clientes').get().t}`);
+  console.log(`Clientes com venda:    ${clientesComVenda}`);
+  console.log(`Vendedores:            ${db.prepare('SELECT COUNT(*) as t FROM vendedores').get().t}`);
+  console.log(`Veículos:              ${db.prepare('SELECT COUNT(*) as t FROM veiculos').get().t}`);
+  console.log(`DW -> fato_vendas:     ${resumoDW.total_vendas} | dimensões: ${resumoDW.total_dimensoes}`);
 }
 
 run().catch(err => {
