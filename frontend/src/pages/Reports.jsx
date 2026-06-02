@@ -398,10 +398,10 @@ export default function Reports() {
             )}
           >
             {vendasMensais.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={[...vendasMensais].reverse()} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={[...vendasMensais].reverse()} margin={{ top: 5, right: 20, left: 20, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} interval={0} angle={-45} textAnchor="end" height={60} />
                   <YAxis tick={{ fontSize: 11 }} tickFormatter={v => 'R$' + fmt(v / 1000) + 'k'} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="faturamento" name="Faturamento" fill="#0d6efd" radius={[6, 6, 0, 0]} maxBarSize={50}>
