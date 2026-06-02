@@ -325,4 +325,4 @@ function seedHistoricalSales() {
   });
 }
 
-module.exports = { getDatabase, initDatabase };
+module.exports = { getDatabase, initDatabase, saveDatabase };
