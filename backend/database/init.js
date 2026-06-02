@@ -72,7 +72,6 @@ async function initDatabase() {
   initTables();
   createIndexes();
   seedData();
-  seedHistoricalSales();
   const DataWarehouseService = require('../services/dataWarehouseService');
   DataWarehouseService.refresh(getDatabase());
   saveDatabase();
@@ -262,67 +261,7 @@ function seedData() {
   db.run("INSERT INTO vendas (cliente_id, vendedor_id, veiculo_id, concessionaria_id, valor_total, forma_pagamento) VALUES (?, ?, ?, ?, ?, ?)",
     [4, 3, 7, 3, 102000.00, 'financiamento']);
 
-  const historicoVendas = [
-    [2, 4, 1, 1, '2024-01-12 10:30:00', 121500.00, 'financiamento'],
-    [5, 1, 5, 1, '2024-02-18 14:15:00', 93000.00, 'consorcio'],
-    [1, 2, 2, 2, '2024-03-09 09:40:00', 112000.00, 'a vista'],
-    [3, 3, 6, 3, '2024-04-22 16:20:00', 169000.00, 'financiamento'],
-    [4, 4, 1, 1, '2024-06-05 11:05:00', 124000.00, 'financiamento'],
-    [2, 2, 7, 2, '2024-08-17 15:45:00', 103500.00, 'a vista'],
-    [5, 3, 5, 3, '2024-10-28 13:10:00', 97000.00, 'consorcio'],
-    [1, 1, 3, 1, '2025-01-14 10:00:00', 132000.00, 'financiamento'],
-    [3, 2, 6, 2, '2025-03-20 17:30:00', 172500.00, 'a vista'],
-    [4, 3, 7, 3, '2025-05-11 12:20:00', 104000.00, 'financiamento'],
-    [2, 4, 5, 1, '2025-07-07 09:25:00', 96000.00, 'consorcio'],
-    [5, 1, 1, 1, '2025-09-23 14:50:00', 126000.00, 'financiamento'],
-    [1, 2, 2, 2, '2025-11-03 16:10:00', 114500.00, 'a vista'],
-    [3, 3, 3, 3, '2026-02-19 11:35:00', 136000.00, 'financiamento'],
-    [4, 4, 6, 1, '2026-04-08 15:05:00', 174000.00, 'a vista']
-  ];
-
-  historicoVendas.forEach(venda => {
-    db.run(`
-      INSERT INTO vendas (cliente_id, vendedor_id, veiculo_id, concessionaria_id, data_venda, valor_total, forma_pagamento)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, venda);
-  });
-
   saveDatabase();
-}
-
-function seedHistoricalSales() {
-  const historicoVendas = [
-    [2, 4, 1, 1, '2024-01-12 10:30:00', 121500.00, 'financiamento'],
-    [5, 1, 5, 1, '2024-02-18 14:15:00', 93000.00, 'consorcio'],
-    [1, 2, 2, 2, '2024-03-09 09:40:00', 112000.00, 'a vista'],
-    [3, 3, 6, 3, '2024-04-22 16:20:00', 169000.00, 'financiamento'],
-    [4, 4, 1, 1, '2024-06-05 11:05:00', 124000.00, 'financiamento'],
-    [2, 2, 7, 2, '2024-08-17 15:45:00', 103500.00, 'a vista'],
-    [5, 3, 5, 3, '2024-10-28 13:10:00', 97000.00, 'consorcio'],
-    [1, 1, 3, 1, '2025-01-14 10:00:00', 132000.00, 'financiamento'],
-    [3, 2, 6, 2, '2025-03-20 17:30:00', 172500.00, 'a vista'],
-    [4, 3, 7, 3, '2025-05-11 12:20:00', 104000.00, 'financiamento'],
-    [2, 4, 5, 1, '2025-07-07 09:25:00', 96000.00, 'consorcio'],
-    [5, 1, 1, 1, '2025-09-23 14:50:00', 126000.00, 'financiamento'],
-    [1, 2, 2, 2, '2025-11-03 16:10:00', 114500.00, 'a vista'],
-    [3, 3, 3, 3, '2026-02-19 11:35:00', 136000.00, 'financiamento'],
-    [4, 4, 6, 1, '2026-04-08 15:05:00', 174000.00, 'a vista']
-  ];
-
-  historicoVendas.forEach(venda => {
-    db.run(`
-      INSERT INTO vendas (cliente_id, vendedor_id, veiculo_id, concessionaria_id, data_venda, valor_total, forma_pagamento)
-      SELECT ?, ?, ?, ?, ?, ?, ?
-      WHERE NOT EXISTS (
-        SELECT 1 FROM vendas
-        WHERE cliente_id = ?
-          AND vendedor_id = ?
-          AND veiculo_id = ?
-          AND concessionaria_id = ?
-          AND data_venda = ?
-      )
-    `, [...venda, venda[0], venda[1], venda[2], venda[3], venda[4]]);
-  });
 }
 
 module.exports = { getDatabase, initDatabase, saveDatabase };

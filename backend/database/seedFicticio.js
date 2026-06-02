@@ -239,6 +239,9 @@ async function run() {
   db.exec('DELETE FROM vendas');
   const distribuicao = gerarVendas(db, clientesGerados);
 
+  // 3.1) Remove clientes antigos: mantém apenas os 1500 vinculados às vendas novas
+  db.exec('DELETE FROM clientes WHERE id NOT IN (SELECT DISTINCT cliente_id FROM vendas)');
+
   // 4) Atualiza o Data Warehouse e persiste
   const resumoDW = DataWarehouseService.refresh(db);
   saveDatabase();
